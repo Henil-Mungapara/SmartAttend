@@ -14,6 +14,17 @@ class Admin_Dashboard_Screen extends StatefulWidget {
 class _Admin_Dashboard_ScreenState extends State<Admin_Dashboard_Screen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  String _getGreeting() {
+    var hour = DateTime.now().hour;
+    if (hour < 12) {
+      return 'Good Morning';
+    }
+    if (hour < 17) {
+      return 'Good Afternoon';
+    }
+    return 'Good Evening';
+  }
+
   bool _isLoading = true;
   String _adminName = "Admin";
   int _totalStudents = 0;
@@ -47,14 +58,14 @@ class _Admin_Dashboard_ScreenState extends State<Admin_Dashboard_Screen> {
       }
 
       // 2. Overview Stats (Students, Faculty, Departments)
-      final studentsSnap = await _firestore.collection('users').where('role', isEqualTo: 'student').get();
-      _totalStudents = studentsSnap.docs.length;
+      final studentsCountSnap = await _firestore.collection('users').where('role', isEqualTo: 'student').count().get();
+      _totalStudents = studentsCountSnap.count ?? 0;
 
-      final facultySnap = await _firestore.collection('users').where('role', isEqualTo: 'faculty').get();
-      _totalFaculty = facultySnap.docs.length;
+      final facultyCountSnap = await _firestore.collection('users').where('role', isEqualTo: 'faculty').count().get();
+      _totalFaculty = facultyCountSnap.count ?? 0;
 
-      final deptSnap = await _firestore.collection('departments').get();
-      _totalDepartments = deptSnap.docs.length;
+      final deptCountSnap = await _firestore.collection('departments').count().get();
+      _totalDepartments = deptCountSnap.count ?? 0;
 
       // College Info
       final collegeSnap = await _firestore.collection('colleges').limit(1).get();
@@ -87,15 +98,17 @@ class _Admin_Dashboard_ScreenState extends State<Admin_Dashboard_Screen> {
                .collection('users')
                .where('role', isEqualTo: 'student')
                .where('classId', isEqualTo: classId)
+               .count()
                .get();
-          expectedStudents += classStudentsSnap.docs.length;
+          expectedStudents += classStudentsSnap.count ?? 0;
         }
 
         final recordsSnap = await _firestore
             .collection('attendance_records')
             .where('sessionId', isEqualTo: sessionId)
+            .count()
             .get();
-        presentStudents += recordsSnap.docs.length;
+        presentStudents += recordsSnap.count ?? 0;
       }
 
       _presentToday = presentStudents;
@@ -139,23 +152,25 @@ class _Admin_Dashboard_ScreenState extends State<Admin_Dashboard_Screen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: w * 0.04),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(height: h * 0.012),
+        child: RefreshIndicator(
+          color: const Color(0xFF0047AB),
+          onRefresh: _fetchDashboardData,
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: w * 0.04),
+            child: ListView(
+              children: [
+                SizedBox(height: h * 0.012),
 
-              Center(
-                child: Column(
-                  children: [
-                    Text(
-                      "Welcome, $_adminName 👨‍💼",
-                      style: TextStyle(
-                        fontSize: w * 0.052,
-                        fontWeight: FontWeight.bold,
+                Center(
+                  child: Column(
+                    children: [
+                      Text(
+                        "${_getGreeting()}, $_adminName 👨‍💼",
+                        style: TextStyle(
+                          fontSize: w * 0.052,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
                     SizedBox(height: h * 0.003),
                     Text(
                       currentDate,
@@ -227,27 +242,21 @@ class _Admin_Dashboard_ScreenState extends State<Admin_Dashboard_Screen> {
 
               SizedBox(height: h * 0.018),
 
-              Text(
-                "College Info",
-                style: TextStyle(fontSize: w * 0.04, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: h * 0.008),
-
-              Expanded(
-                child: ListView(
-                  padding: EdgeInsets.zero,
-                  children: [
-                    _infoTile(Icons.account_balance_rounded, "College", _collegeName, Colors.indigo, w, h),
-                    _infoTile(Icons.apartment_rounded, "Departments", "$_totalDepartments Departments Registered", Colors.orange, w, h),
-                    _infoTile(Icons.school_rounded, "Students", "$_totalStudents Enrolled Students", Colors.blue, w, h),
-                    _infoTile(Icons.person_rounded, "Faculty", "$_totalFaculty Faculty Members", Colors.green, w, h),
-                    _infoTile(Icons.calendar_today_rounded, "Academic Year", _academicYear, Colors.teal, w, h),
-                    _infoTile(Icons.access_time_rounded, "Semesters", _semesters, Colors.deepPurple, w, h),
-                    SizedBox(height: h * 0.01),
-                  ],
+                Text(
+                  "College Info",
+                  style: TextStyle(fontSize: w * 0.04, fontWeight: FontWeight.bold),
                 ),
-              ),
-            ],
+                SizedBox(height: h * 0.008),
+
+                _infoTile(Icons.account_balance_rounded, "College", _collegeName, Colors.indigo, w, h),
+                _infoTile(Icons.apartment_rounded, "Departments", "$_totalDepartments Departments Registered", Colors.orange, w, h),
+                _infoTile(Icons.school_rounded, "Students", "$_totalStudents Enrolled Students", Colors.blue, w, h),
+                _infoTile(Icons.person_rounded, "Faculty", "$_totalFaculty Faculty Members", Colors.green, w, h),
+                _infoTile(Icons.calendar_today_rounded, "Academic Year", _academicYear, Colors.teal, w, h),
+                _infoTile(Icons.access_time_rounded, "Semesters", _semesters, Colors.deepPurple, w, h),
+                SizedBox(height: h * 0.01),
+              ],
+            ),
           ),
         ),
       ),

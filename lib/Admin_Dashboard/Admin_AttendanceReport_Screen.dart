@@ -322,13 +322,13 @@ class _Admin_AttendanceReport_ScreenState extends State<Admin_AttendanceReport_S
                     _buildDropdown("Select College", _colleges, _selectedCollegeId, (val) {
                       setState(() => _selectedCollegeId = val);
                       if(val != null) _fetchDepartments(val);
-                    }),
+                    }, isAwaiting: false),
                     SizedBox(height: h * 0.015),
 
                     _buildDropdown("Select Department", _departments, _selectedDepartmentId, (val) {
                       setState(() => _selectedDepartmentId = val);
                       if(val != null) _fetchClasses(val);
-                    }),
+                    }, isAwaiting: _selectedCollegeId == null),
                     SizedBox(height: h * 0.015),
 
                     _buildDropdown("Select Class", _classes, _selectedClassId, (val) {
@@ -337,17 +337,17 @@ class _Admin_AttendanceReport_ScreenState extends State<Admin_AttendanceReport_S
                          _fetchDivisions(val);
                          _fetchSubjects(val); 
                       }
-                    }),
+                    }, isAwaiting: _selectedDepartmentId == null),
                     SizedBox(height: h * 0.015),
 
                     _buildDropdown("Select Division", _divisions, _selectedDivisionId, (val) {
                       setState(() => _selectedDivisionId = val);
-                    }),
+                    }, isAwaiting: _selectedClassId == null),
                     SizedBox(height: h * 0.015),
 
                     _buildDropdown("Select Subject (Optional)", _subjects, _selectedSubjectId, (val) {
                       setState(() => _selectedSubjectId = val);
-                    }, isOptional: true),
+                    }, isOptional: true, isAwaiting: _selectedClassId == null),
                   ],
                 ),
               ),
@@ -526,15 +526,15 @@ class _Admin_AttendanceReport_ScreenState extends State<Admin_AttendanceReport_S
     );
   }
 
-  Widget _buildDropdown(String hint, List<Map<String, dynamic>> items, String? selectedValue, Function(String?) onChanged, {bool isOptional = false}) {
+  Widget _buildDropdown(String hint, List<Map<String, dynamic>> items, String? selectedValue, Function(String?) onChanged, {bool isOptional = false, bool isAwaiting = false}) {
     return DropdownButtonFormField<String>(
       value: selectedValue,
       isExpanded: true,
       decoration: InputDecoration(
-        hintText: items.isEmpty && !isOptional ? "Awaiting previous selection..." : hint,
-        hintStyle: TextStyle(color: items.isEmpty ? Colors.black38 : Colors.black54, fontSize: 14),
+        hintText: isAwaiting ? "Awaiting previous selection..." : (items.isEmpty && !isOptional ? "No items found" : hint),
+        hintStyle: TextStyle(color: (isAwaiting || items.isEmpty) ? Colors.black38 : Colors.black54, fontSize: 14),
         filled: true,
-        fillColor: items.isEmpty && !isOptional ? Colors.grey.shade100 : Colors.white,
+        fillColor: isAwaiting ? Colors.grey.shade100 : Colors.white,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: BorderSide(color: Colors.grey.shade300),
@@ -553,7 +553,7 @@ class _Admin_AttendanceReport_ScreenState extends State<Admin_AttendanceReport_S
             value: e['id'],
             child: Text(e['name'], overflow: TextOverflow.ellipsis),
           )).toList(),
-      onChanged: items.isEmpty && !isOptional ? null : onChanged,
+      onChanged: (isAwaiting || (items.isEmpty && !isOptional)) ? null : onChanged,
     );
   }
 }
